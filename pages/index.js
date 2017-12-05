@@ -2,7 +2,10 @@
 
 import React, { Component } from 'react'
 import { Form, Field } from 'react-final-form'
+import { isEmpty } from 'lodash'
+
 import Checkbox from '../components/Checkbox'
+import Button from '../components/Button'
 import categories from '../json/categories.json'
 import verticals from '../json/verticals.json'
 import courses from '../json/courses.json'
@@ -10,14 +13,27 @@ import courses from '../json/courses.json'
 type Props = {};
 
 export default class Index extends Component<Props> {
+  componentDidMount () {
+    if (document) {
+      document.body.style.fontFamily = '-apple-system'
+    }
+  }
+
   submitHandler (values: ?Object) {
-    return values
+    const selectedCourses = values.courses && values.courses.map((course, index) => {
+      if (course) {
+        return courses[index]
+      }
+    }).filter(c => c)
+
+    alert(`Selected:
+    ${JSON.stringify(selectedCourses, null, 2)}`)
   }
 
   render () {
     const verts = verticals.map((vert, index) => (
       <Field
-        key={index}
+        key={vert.Id}
         component={Checkbox}
         name={`verticals[${index}]`}
         value={vert.Id}
@@ -30,7 +46,7 @@ export default class Index extends Component<Props> {
       <Form
         onSubmit={this.submitHandler}
       >
-        {({handleSubmit, values}) => {
+        {({handleSubmit, values, reset}) => {
           const selectedVerticals = values.verticals && values.verticals.map((vert, index) => {
             if (vert) {
               return verticals[index].Id
@@ -47,8 +63,8 @@ export default class Index extends Component<Props> {
             return null
           })
 
-          const showCatgeories = values.verticals && values.verticals.filter(v => v !== null)
-          const showCourses = values.categories && values.categories.filter(v => v !== null)
+          const showCatgeories = !isEmpty(values.verticals && values.verticals.filter(v => v !== null))
+          const showCourses = !isEmpty(values.categories && values.categories.filter(v => v !== null))
 
           const cats = categories.map((cat, index) => {
             if (values.verticals && selectedVerticals.includes(+cat.Verticals)) {
@@ -96,6 +112,17 @@ export default class Index extends Component<Props> {
                 <div>
                   <h1>Now choose some courses</h1>
                   {courseList}
+                </div>
+              }
+              {!isEmpty(values.categories) &&
+                <div style={{ display: 'inline-flex' }}>
+                  <Button primary>Get started</Button>
+                  <Button
+                    onClick={reset}
+                    noSubmit
+                  >
+                    Reset
+                  </Button>
                 </div>
               }
             </form>

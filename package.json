@@ -13,10 +13,12 @@
   "dependencies": {
     "eslint-plugin-react": "^7.5.1",
     "final-form": "^1.1.0",
+    "lodash": "^4.17.4",
     "next": "^4.1.4",
     "react": "^16.2.0",
     "react-dom": "^16.2.0",
-    "react-final-form": "^1.1.0"
+    "react-final-form": "^1.1.0",
+    "react-icons-kit": "^1.0.7"
   },
   "devDependencies": {
     "babel-eslint": "^8.0.2",
