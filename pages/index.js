@@ -1,28 +1,60 @@
 // @flow
 
 import React, { Component } from 'react'
-import { Form, Field } from 'react-final-form'
-import { isEmpty } from 'lodash'
+import { Form, Field, FormSpy } from 'react-final-form'
+import { isEmpty, capitalize } from 'lodash'
+import withRedux from 'next-redux-wrapper'
+import { autobind } from 'core-decorators'
+import { bindActionCreators } from 'redux'
 
 import Checkbox from '../components/Checkbox'
 import Button from '../components/Button'
-import categories from '../json/categories.json'
-import verticals from '../json/verticals.json'
-import courses from '../json/courses.json'
+import { getVerticals } from '../redux/modules/verticals'
+import { getCategories } from '../redux/modules/categories'
+import { getCourses } from '../redux/modules/courses'
+import initStore from '../redux'
 
-type Props = {};
+type Props = {
+  getVerticals: Function,
+  getCategories: Function,
+  getCourses: Function,
+  verticals: Array<mixed>,
+  categories: Array<mixed>,
+  courses: Array<mixed>,
+  isLoaded: Boolean
+};
 
+@withRedux(
+  initStore,
+  (state) => ({
+    verticals: state.verticals.data,
+    categories: state.categories.data,
+    courses: state.courses.data
+  }),
+  (dispatch) => bindActionCreators({
+    getVerticals,
+    getCategories,
+    getCourses
+  }, dispatch)
+)
 export default class Index extends Component<Props> {
-  componentDidMount () {
-    if (document) {
-      document.body.style.fontFamily = '-apple-system'
-    }
+  static defaultProps = {
+    verticals: [],
+    categories: [],
+    courses: []
   }
 
+  static getInitialProps ({ store, isServer }) {
+    store.dispatch(getVerticals())
+
+    return { isServer }
+  }
+
+  @autobind
   submitHandler (values: ?Object) {
     const selectedCourses = values.courses && values.courses.map((course, index) => {
       if (course) {
-        return courses[index]
+        return this.props.courses[index]
       }
     }).filter(c => c)
 
@@ -30,91 +62,97 @@ export default class Index extends Component<Props> {
     ${JSON.stringify(selectedCourses, null, 2)}`)
   }
 
+  dispatchHandler (store: string, values: array) {
+    const functionName = `get${capitalize(store)}`
+
+    this.props[functionName](values || [])
+  }
+
   render () {
-    const verts = verticals.map((vert, index) => (
-      <Field
-        key={vert.Id}
-        component={Checkbox}
-        name={`verticals[${index}]`}
-        value={vert.Id}
-      >
-        {vert.Name}
-      </Field>
-    ))
+    const { verticals, categories, courses } = this.props
 
     return (
       <Form
         onSubmit={this.submitHandler}
       >
         {({handleSubmit, values, reset}) => {
-          const selectedVerticals = values.verticals && values.verticals.map((vert, index) => {
-            if (vert) {
-              return verticals[index].Id
-            }
+          const isPopulated = (prop) => !isEmpty(values[prop] && values[prop].filter(v => v))
+          const show = {
+            categories: isPopulated('verticals'),
+            courses: isPopulated('categories') && isPopulated('verticals')
+          }
+          show.submit = show.courses && isPopulated('courses')
 
-            return null
-          })
+          const verts = verticals.map((vert, index) => (
+            <Field
+              key={vert.Id}
+              component={Checkbox}
+              name={`verticals[${index}]`}
+            >
+              {vert.Name}
+            </Field>
+          ))
 
-          const selectedCategories = values.categories && values.categories.map((cat, index) => {
-            if (cat) {
-              return categories[index].Id
-            }
+          const categoriesList = !isEmpty(categories) && categories.map((cat, index) => (
+            <Field
+              key={cat.Id}
+              component={Checkbox}
+              name={`categories[${index}]`}
+            >
+              {cat.Name}
+            </Field>
+          ))
 
-            return null
-          })
-
-          const showCatgeories = !isEmpty(values.verticals && values.verticals.filter(v => v !== null))
-          const showCourses = !isEmpty(values.categories && values.categories.filter(v => v !== null))
-
-          const cats = categories.map((cat, index) => {
-            if (values.verticals && selectedVerticals.includes(+cat.Verticals)) {
-              return (
-                <Field
-                  key={cat.Id}
-                  component={Checkbox}
-                  name={`categories[${index}]`}
-                >
-                  {cat.Name}
-                </Field>
-              )
-            }
-
-            return null
-          })
-
-          const courseList = courses.map((course, index) => {
-            if (values.categories && selectedCategories.includes(+course.Categories)) {
-              return (
-                <Field
-                  key={course.Id}
-                  component={Checkbox}
-                  name={`courses[${index}]`}
-                >
-                  {course.Name}
-                </Field>
-              )
-            }
-
-            return null
-          })
+          const coursesList = show.courses && courses.map((course, index) => (
+            <Field
+              key={course.Id}
+              component={Checkbox}
+              name={`courses[${index}]`}
+            >
+              {course.Name}
+            </Field>
+          ))
 
           return (
             <form onSubmit={handleSubmit}>
               <h1>Pick some verticals</h1>
               {verts}
-              {showCatgeories &&
+              {show.categories &&
                 <div>
-                  <h1>Pick some categories</h1>
-                  {cats}
+                  <h1>Pick some specifics</h1>
+                  {categoriesList}
                 </div>
               }
-              {showCourses && showCatgeories &&
+              {show.courses &&
                 <div>
-                  <h1>Now choose some courses</h1>
-                  {courseList}
+                  <h1>Now just pick your courses!</h1>
+                  {coursesList}
                 </div>
               }
-              {!isEmpty(values.categories) &&
+              <FormSpy
+                subscription={{
+                  values: true,
+                  initialValues: false,
+                  pristine: true
+                }}
+                onChange={({ values: vals, pristine }) => {
+                    if (!pristine) {
+                      if (vals.verticals) {
+                        this.dispatchHandler(
+                          'categories',
+                          vals.verticals.map((item, index) => item ? verticals[index] : null).filter(item => item)
+                        )
+                      }
+                      if (vals.categories) {
+                        this.dispatchHandler(
+                          'courses',
+                          vals.categories.map((item, index) => item ? categories[index] : null).filter(item => item)
+                        )
+                      }
+                    }
+                }}
+              />
+              {show.submit &&
                 <div style={{ display: 'inline-flex' }}>
                   <Button primary>Get started</Button>
                   <Button
