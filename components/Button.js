@@ -3,6 +3,18 @@ import Link from 'next/link'
 import Icon from 'react-icons-kit'
 import { power } from 'react-icons-kit/ionicons/power'
 
+// type propTypes = {
+//   children: ?String,
+//   noSubmit: ?Boolean,
+//   small: ?Boolean,
+//   onClick: ?Object,
+//   to: ?String,
+//   icon: ?String,
+//   style: ?Object,
+//   primary: ?Boolean,
+//   disabled: ?Boolean
+// }
+
 const Button = (props) => {
   const {
     children, noSubmit, small, onClick, to, icon, style, primary, disabled
